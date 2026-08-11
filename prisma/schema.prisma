@@ -13,8 +13,40 @@ datasource db {
 }
 
 model Store {
+  id          Int             @id @default(autoincrement())
+  name        String
+  phone       String
+  createdAt   DateTime        @default(now())
+
+  inventory   InventoryItem[]
+}
+
+model InventoryItem {
+  id          Int      @id @default(autoincrement())
+
+  sku         String   @unique
+
+  productType String @default("Inconnu")
+
+  label       String
+
+  brand       String?
+
+  quantity    Int      @default(0)
+
+  price       Float?
+
+  storeId      Int
+  store        Store    @relation(fields: [storeId], references: [id])
+
+  createdAt   DateTime @default(now())
+}
+
+model Vehicle {
   id        Int      @id @default(autoincrement())
-  name      String
-  phone     String
+
+  make      String
+  model     String
+
   createdAt DateTime @default(now())
 }
