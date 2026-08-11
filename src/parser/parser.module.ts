@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { CatalogModule } from '../catalog/catalog.module';
 import { VehicleModule } from '../vehicle/vehicle.module';
+import { SearchModule } from '../search/search.module';
+
 import { ParserController } from './parser.controller';
 import { ParserService } from './parser.service';
 
@@ -8,6 +10,7 @@ import { ParserService } from './parser.service';
   imports: [
     CatalogModule,
     VehicleModule,
+    SearchModule,
   ],
   controllers: [ParserController],
   providers: [ParserService],
