@@ -6,6 +6,7 @@ import { ConversationManager } from './conversation.manager';
 import { ConversationMemory } from './conversation.memory';
 import { ConversationContextService } from './conversation-context.service';
 import { ConversationResponseService } from './conversation-response.service';
+import { ResultActionService } from './result-action.service';
 
 import { ParserModule } from '../parser/parser.module';
 import { SearchModule } from '../search/search.module';
@@ -26,6 +27,7 @@ import { IntentModule } from '../intent/intent.module';
     ConversationMemory,
     ConversationContextService,
     ConversationResponseService,
+    ResultActionService,
   ],
 })
 export class ConversationModule {}

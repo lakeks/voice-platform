@@ -12,18 +12,25 @@ export class IntentService {
 
     const text = message.toLowerCase();
 
-    // Nouvelle intention : le moins cher
+    // Le moins cher
 
     if (
       text.includes('moins cher') ||
-      text.includes('moins chère') ||
-      text.includes('le moins cher')
+      text.includes('moins chère')
     ) {
       return IntentType.CHEAPEST_RESULT;
     }
 
-    // Si on attend une information,
-    // toute réponse est considérée comme une recherche.
+    // Le plus cher
+
+    if (
+      text.includes('plus cher') ||
+      text.includes('plus chère')
+    ) {
+      return IntentType.MOST_EXPENSIVE_RESULT;
+    }
+
+    // Si on attend une information
 
     if (
       state === ConversationState.WAITING_PRODUCT ||

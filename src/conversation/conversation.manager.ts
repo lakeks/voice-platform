@@ -9,6 +9,7 @@ import { SearchService } from '../search/search.service';
 import { ConversationMemory } from './conversation.memory';
 import { ConversationContextService } from './conversation-context.service';
 import { ConversationResponseService } from './conversation-response.service';
+import { ResultActionService } from './result-action.service';
 
 import { ConversationContext } from './types/conversation-context.type';
 import { ConversationState } from './types/conversation-state.type';
@@ -23,6 +24,7 @@ export class ConversationManager {
     private readonly conversationMemory: ConversationMemory,
     private readonly contextService: ConversationContextService,
     private readonly responseService: ConversationResponseService,
+    private readonly resultActionService: ResultActionService,
   ) {}
 
   private loadOrCreateContext(sessionId: string): ConversationContext {
@@ -56,26 +58,38 @@ export class ConversationManager {
 
       case IntentType.CHEAPEST_RESULT: {
 
-        if (!context.results || context.results.length === 0) {
+        if (!context.results?.length) {
           return {
             status: 'no_results',
             reply: "Je n'ai aucun résultat en mémoire.",
           };
         }
 
-        const cheapest = context.results.reduce((a, b) => {
-
-          const priceA = a.price ?? Number.MAX_SAFE_INTEGER;
-          const priceB = b.price ?? Number.MAX_SAFE_INTEGER;
-
-          return priceA < priceB ? a : b;
-
-        });
+        const cheapest = this.resultActionService.cheapest(context.results);
 
         return {
           status: 'completed',
           reply: `Le modèle le moins cher est ${cheapest.label} à ${cheapest.price} F CFP.`,
           result: cheapest,
+        };
+
+      }
+
+      case IntentType.MOST_EXPENSIVE_RESULT: {
+
+        if (!context.results?.length) {
+          return {
+            status: 'no_results',
+            reply: "Je n'ai aucun résultat en mémoire.",
+          };
+        }
+
+        const mostExpensive = this.resultActionService.mostExpensive(context.results);
+
+        return {
+          status: 'completed',
+          reply: `Le modèle le plus cher est ${mostExpensive.label} à ${mostExpensive.price} F CFP.`,
+          result: mostExpensive,
         };
 
       }
