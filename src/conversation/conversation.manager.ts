@@ -8,6 +8,7 @@ import { SearchService } from '../search/search.service';
 
 import { ConversationMemory } from './conversation.memory';
 import { ConversationContextService } from './conversation-context.service';
+import { ConversationResponseService } from './conversation-response.service';
 
 import { ConversationContext } from './types/conversation-context.type';
 import { ConversationState } from './types/conversation-state.type';
@@ -21,11 +22,10 @@ export class ConversationManager {
     private readonly searchService: SearchService,
     private readonly conversationMemory: ConversationMemory,
     private readonly contextService: ConversationContextService,
+    private readonly responseService: ConversationResponseService,
   ) {}
 
-  private loadOrCreateContext(
-    sessionId: string,
-  ): ConversationContext {
+  private loadOrCreateContext(sessionId: string): ConversationContext {
 
     const existing = this.conversationMemory.get(sessionId);
 
@@ -41,10 +41,7 @@ export class ConversationManager {
 
   }
 
-  async process(
-    message: string,
-    sessionId = 'default',
-  ) {
+  async process(message: string, sessionId = 'default') {
 
     let context = this.loadOrCreateContext(sessionId);
 
@@ -57,10 +54,35 @@ export class ConversationManager {
 
     switch (intent) {
 
+      case IntentType.CHEAPEST_RESULT: {
+
+        if (!context.results || context.results.length === 0) {
+          return {
+            status: 'no_results',
+            reply: "Je n'ai aucun résultat en mémoire.",
+          };
+        }
+
+        const cheapest = context.results.reduce((a, b) => {
+
+          const priceA = a.price ?? Number.MAX_SAFE_INTEGER;
+          const priceB = b.price ?? Number.MAX_SAFE_INTEGER;
+
+          return priceA < priceB ? a : b;
+
+        });
+
+        return {
+          status: 'completed',
+          reply: `Le modèle le moins cher est ${cheapest.label} à ${cheapest.price} F CFP.`,
+          result: cheapest,
+        };
+
+      }
+
       case IntentType.GREETING:
 
         context.state = ConversationState.GREETING;
-
         this.conversationMemory.save(context);
 
         return {
@@ -78,7 +100,6 @@ export class ConversationManager {
       case IntentType.GOODBYE:
 
         context.state = ConversationState.FINISHED;
-
         this.conversationMemory.clear(sessionId);
 
         return {
@@ -89,7 +110,6 @@ export class ConversationManager {
       case IntentType.HUMAN_TRANSFER:
 
         context.state = ConversationState.TRANSFER_HUMAN;
-
         this.conversationMemory.save(context);
 
         return {
@@ -119,43 +139,50 @@ export class ConversationManager {
     this.conversationMemory.save(context);
 
     if (context.state === ConversationState.WAITING_PRODUCT) {
-
       return {
         status: 'need_information',
         reply: 'Quelle pièce recherchez-vous ?',
       };
-
     }
 
     if (context.state === ConversationState.WAITING_VEHICLE) {
-
       return {
         status: 'need_information',
         reply: 'Pour quel véhicule recherchez-vous cette pièce ?',
       };
-
     }
 
     const results = await this.searchService.search({
-
       product: context.product,
-
       brand: context.brand,
-
     });
+
+    context.results = results;
 
     context.state = ConversationState.FINISHED;
 
     this.conversationMemory.save(context);
 
+    let reply = 'Aucune pièce trouvée.';
+
+    if (results.length > 0) {
+
+      const first = results[0];
+
+      reply = this.responseService.buildSearchResult(
+        `${context.vehicle?.make} ${context.vehicle?.model}`,
+        first.label,
+        first.quantity,
+        first.price,
+      );
+
+    }
+
     return {
-
       status: 'completed',
-
+      reply,
       query: context,
-
       results,
-
     };
 
   }

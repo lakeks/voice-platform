@@ -18,4 +18,16 @@ export interface ConversationContext {
     model: string;
   };
 
+  results?: {
+    id: number;
+    sku: string;
+    productType: string;
+    label: string;
+    brand: string | null;
+    quantity: number;
+    price: number | null;
+    storeId: number;
+    createdAt: Date;
+  }[];
+
 }

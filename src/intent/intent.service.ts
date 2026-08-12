@@ -10,16 +10,27 @@ export class IntentService {
     state?: ConversationState,
   ): IntentType {
 
-    // Si on attend une information, toute réponse est considérée
-    // comme une continuation de recherche.
+    const text = message.toLowerCase();
+
+    // Nouvelle intention : le moins cher
+
+    if (
+      text.includes('moins cher') ||
+      text.includes('moins chère') ||
+      text.includes('le moins cher')
+    ) {
+      return IntentType.CHEAPEST_RESULT;
+    }
+
+    // Si on attend une information,
+    // toute réponse est considérée comme une recherche.
+
     if (
       state === ConversationState.WAITING_PRODUCT ||
       state === ConversationState.WAITING_VEHICLE
     ) {
       return IntentType.SEARCH_PART;
     }
-
-    const text = message.toLowerCase();
 
     if (
       text.includes('cherche') ||
@@ -61,6 +72,7 @@ export class IntentService {
     }
 
     return IntentType.UNKNOWN;
+
   }
 
 }
