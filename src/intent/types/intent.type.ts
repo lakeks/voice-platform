@@ -1,0 +1,15 @@
+export enum IntentType {
+
+  SEARCH_PART = 'SEARCH_PART',
+
+  GREETING = 'GREETING',
+
+  GOODBYE = 'GOODBYE',
+
+  THANKS = 'THANKS',
+
+  HUMAN_TRANSFER = 'HUMAN_TRANSFER',
+
+  UNKNOWN = 'UNKNOWN',
+
+}

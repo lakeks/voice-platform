@@ -1,17 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { CatalogService } from '../catalog/catalog.service';
 import { VehicleService } from '../vehicle/vehicle.service';
-import { SearchService } from '../search/search.service';
 
 @Injectable()
 export class ParserService {
   constructor(
     private readonly catalogService: CatalogService,
     private readonly vehicleService: VehicleService,
-    private readonly searchService: SearchService,
   ) {}
 
   async parse(question: string) {
+
     const normalizedQuestion = question.toLowerCase().trim();
     const words = normalizedQuestion.split(/\s+/);
 
@@ -22,18 +21,19 @@ export class ParserService {
     // Véhicules
     const vehicles = await this.vehicleService.findAll();
 
-    // Recherche du produit
+    // Produit
     const product = products.find(product =>
       normalizedQuestion.includes(product),
     );
 
-    // Recherche de la marque
+    // Marque
     const brand = brands.find(brand =>
       words.includes(brand),
     );
 
-    // Recherche du véhicule
+    // Véhicule
     const vehicle = vehicles.find(vehicle => {
+
       if (!vehicle.model || vehicle.model.trim() === '') {
         return false;
       }
@@ -41,21 +41,15 @@ export class ParserService {
       return normalizedQuestion.includes(
         vehicle.model.toLowerCase(),
       );
-    });
 
-    // Recherche dans le stock
-    const results = await this.searchService.search({
-      product,
-      brand,
     });
 
     return {
-      query: {
-        product,
-        brand,
-        vehicle,
-      },
-      results,
+      product,
+      brand,
+      vehicle,
+      words,
     };
+
   }
 }

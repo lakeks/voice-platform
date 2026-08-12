@@ -12,6 +12,7 @@ import { ParserModule } from './parser/parser.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { VehicleModule } from './vehicle/vehicle.module';
 import { SearchModule } from './search/search.module';
+import { IntentModule } from './intent/intent.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { SearchModule } from './search/search.module';
     CatalogModule,
     VehicleModule,
     SearchModule,
+    IntentModule,
   ],
   controllers: [AppController],
   providers: [AppService],
