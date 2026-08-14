@@ -12,6 +12,23 @@ export class IntentService {
 
     const text = message.toLowerCase();
 
+    // Récapitulatif du devis
+
+    if (
+      text.includes('c\'est quoi le total') ||
+      text.includes('ça fait combien') ||
+      text.includes('ca fait combien') ||
+      text.includes('combien au total') ||
+      text.includes('quel est le total') ||
+      text.includes('rappeler ce que j\'ai pris') ||
+      text.includes('rappeler ce que j ai pris') ||
+      text.includes('détail du devis') ||
+      text.includes('detail du devis') ||
+      text.includes('sur le devis')
+    ) {
+      return IntentType.QUOTE_SUMMARY;
+    }
+
     // Demande de devis
 
     if (

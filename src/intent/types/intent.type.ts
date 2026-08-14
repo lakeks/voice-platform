@@ -22,4 +22,6 @@ export enum IntentType {
 
   CREATE_QUOTE = 'CREATE_QUOTE',
 
+  QUOTE_SUMMARY = 'QUOTE_SUMMARY',
+
 }

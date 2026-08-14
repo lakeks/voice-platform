@@ -11,8 +11,40 @@ export class ResultActionService {
     intent: IntentType,
   ) {
 
-    if (!context.results?.length) {
+    if (!context.results?.length && !context.quote) {
       return null;
+    }
+
+    // ------------------------
+    // Récapitulatif du devis
+    // ------------------------
+
+    if (intent === IntentType.QUOTE_SUMMARY) {
+
+      if (!context.quote || !context.quote.items?.length) {
+
+        return {
+          status: 'no_quote',
+          reply: "Je n'ai pas encore de devis en cours.",
+        };
+
+      }
+
+      const items = context.quote.items
+        .map(
+          (item: any) =>
+            `${item.quantity} ${item.label} à ${item.unitPrice} F CFP`,
+        )
+        .join(', ');
+
+      return {
+        status: 'quote_summary',
+        reply:
+          `Bien sûr. Sur votre devis, vous avez : ${items}. ` +
+          `Le total est de ${context.quote.total} F CFP.`,
+        quote: context.quote,
+      };
+
     }
 
     // ------------------------
@@ -33,6 +65,47 @@ export class ResultActionService {
       }
 
       context.selectedResult = result;
+
+      // Si un devis existe déjà, on ajoute le produit au devis
+
+      if (context.quote) {
+
+        const existingItem = context.quote.items.find(
+          (item: any) => item.sku === result.sku,
+        );
+
+        if (existingItem) {
+
+          existingItem.quantity += 1;
+
+        } else {
+
+          context.quote.items.push({
+            sku: result.sku,
+            label: result.label,
+            brand: result.brand,
+            quantity: 1,
+            unitPrice: result.price ?? 0,
+          });
+
+        }
+
+        context.quote.total = context.quote.items.reduce(
+          (total: number, item: any) =>
+            total + (item.quantity * item.unitPrice),
+          0,
+        );
+
+        return {
+          status: 'quote_updated',
+          reply:
+            `J'ai ajouté ${result.label} à votre devis. ` +
+            `Le nouveau total est de ${context.quote.total} F CFP.`,
+          result,
+          quote: context.quote,
+        };
+
+      }
 
       return {
         status: 'completed',
