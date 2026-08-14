@@ -12,6 +12,24 @@ export class IntentService {
 
     const text = message.toLowerCase();
 
+    // Retirer une pièce du devis
+
+    if (
+      text.includes('finalement') ||
+      text.includes('retire') ||
+      text.includes('retirer') ||
+      text.includes('enlève') ||
+      text.includes('enlevez') ||
+      text.includes('enlever') ||
+      text.includes('supprime') ||
+      text.includes('supprimer') ||
+      text.includes('je ne prends plus') ||
+      text.includes('je prends plus') ||
+      text.includes('pas besoin')
+    ) {
+      return IntentType.REMOVE_QUOTE_ITEM;
+    }
+
     // Récapitulatif du devis
 
     if (

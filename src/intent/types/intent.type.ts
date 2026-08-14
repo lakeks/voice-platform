@@ -24,4 +24,6 @@ export enum IntentType {
 
   QUOTE_SUMMARY = 'QUOTE_SUMMARY',
 
+  REMOVE_QUOTE_ITEM = 'REMOVE_QUOTE_ITEM',
+
 }

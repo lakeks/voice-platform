@@ -16,6 +16,7 @@ export class ParserService {
   async parse(question: string): Promise<ParserResult> {
 
     const normalizedQuestion = question.toLowerCase().trim();
+
     const words = normalizedQuestion
       .replace(/[.,!?;:]/g, '')
       .split(/\s+/);
@@ -32,7 +33,7 @@ export class ParserService {
     // Produit
 
     const product = products.find(product =>
-      normalizedQuestion.includes(product),
+      normalizedQuestion.includes(product.toLowerCase()),
     );
 
     // Marque
@@ -71,6 +72,13 @@ export class ParserService {
       normalizedQuestion.includes('second')
     ) {
       position = 2;
+    }
+
+    if (
+      normalizedQuestion.includes('troisième') ||
+      normalizedQuestion.includes('troisieme')
+    ) {
+      position = 3;
     }
 
     return {

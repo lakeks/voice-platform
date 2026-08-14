@@ -48,6 +48,80 @@ export class ResultActionService {
     }
 
     // ------------------------
+    // Suppression d'une pièce
+    // ------------------------
+
+    if (intent === IntentType.REMOVE_QUOTE_ITEM) {
+
+      if (!context.quote || !context.quote.items?.length) {
+
+        return {
+          status: 'no_quote',
+          reply: "Je n'ai pas encore de devis en cours.",
+        };
+
+      }
+
+      const product = parsed.product?.toLowerCase();
+
+      if (!product) {
+
+        return {
+          status: 'need_information',
+          reply:
+            "Quelle pièce souhaitez-vous retirer du devis ?",
+        };
+
+      }
+
+      const index = context.quote.items.findIndex(
+        (item: any) =>
+          item.label?.toLowerCase().includes(product),
+      );
+
+      if (index === -1) {
+
+        return {
+          status: 'not_found',
+          reply:
+            `Je ne trouve pas ${parsed.product} dans votre devis.`,
+        };
+
+      }
+
+      const removed = context.quote.items.splice(index, 1)[0];
+
+      context.quote.total = context.quote.items.reduce(
+        (total: number, item: any) =>
+          total + (item.quantity * item.unitPrice),
+        0,
+      );
+
+      if (context.quote.items.length === 0) {
+
+        return {
+          status: 'quote_updated',
+          reply:
+            `${removed.label} a été retiré de votre devis. ` +
+            `Votre devis ne contient plus aucune pièce.`,
+          removed,
+          quote: context.quote,
+        };
+
+      }
+
+      return {
+        status: 'quote_updated',
+        reply:
+          `${removed.label} a été retiré de votre devis. ` +
+          `Le nouveau total est de ${context.quote.total} F CFP.`,
+        removed,
+        quote: context.quote,
+      };
+
+    }
+
+    // ------------------------
     // Sélection par position
     // ------------------------
 
@@ -59,7 +133,8 @@ export class ResultActionService {
 
         return {
           status: 'no_results',
-          reply: `Je n'ai pas trouvé le résultat numéro ${parsed.position}.`,
+          reply:
+            `Je n'ai pas trouvé le résultat numéro ${parsed.position}.`,
         };
 
       }
@@ -152,10 +227,6 @@ export class ResultActionService {
 
     switch (intent) {
 
-      // ------------------------
-      // Moins cher
-      // ------------------------
-
       case IntentType.CHEAPEST_RESULT: {
 
         const result = this.cheapest(context.results);
@@ -171,10 +242,6 @@ export class ResultActionService {
 
       }
 
-      // ------------------------
-      // Plus cher
-      // ------------------------
-
       case IntentType.MOST_EXPENSIVE_RESULT: {
 
         const result = this.mostExpensive(context.results);
@@ -189,10 +256,6 @@ export class ResultActionService {
         };
 
       }
-
-      // ------------------------
-      // Vérification du stock
-      // ------------------------
 
       case IntentType.CHECK_STOCK: {
 
@@ -235,10 +298,6 @@ export class ResultActionService {
 
       }
 
-      // ------------------------
-      // Le client passe au magasin
-      // ------------------------
-
       case IntentType.VISIT_STORE: {
 
         return {
@@ -248,10 +307,6 @@ export class ResultActionService {
         };
 
       }
-
-      // ------------------------
-      // Création du devis
-      // ------------------------
 
       case IntentType.CREATE_QUOTE: {
 
