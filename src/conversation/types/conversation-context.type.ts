@@ -13,21 +13,20 @@ export interface ConversationContext {
 
   brand?: string;
 
-  vehicle?: {
-    make: string;
-    model: string;
-  };
+  vehicle?: any;
 
-  results?: {
-    id: number;
-    sku: string;
-    productType: string;
-    label: string;
-    brand: string | null;
-    quantity: number;
-    price: number | null;
-    storeId: number;
+  results?: any[];
+
+  selectedResult?: any;
+
+  quote?: {
+
     createdAt: Date;
-  }[];
+
+    items: any[];
+
+    total: number;
+
+  };
 
 }

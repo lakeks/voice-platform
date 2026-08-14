@@ -35,15 +35,11 @@ export class ResultActionService {
       context.selectedResult = result;
 
       return {
-
         status: 'completed',
-
         reply:
           `Voici le ${this.ordinal(parsed.position)} modèle : ` +
           `${result.label} à ${result.price} F CFP.`,
-
         result,
-
       };
 
     }
@@ -63,12 +59,9 @@ export class ResultActionService {
       if (!results.length) {
 
         return {
-
           status: 'no_results',
-
           reply:
             `Je n'ai trouvé aucun modèle ${parsed.brand}.`,
-
         };
 
       }
@@ -76,19 +69,19 @@ export class ResultActionService {
       context.results = results;
 
       return {
-
         status: 'completed',
-
         reply:
           `J'ai trouvé ${results.length} modèle(s) ${parsed.brand}.`,
-
         results,
-
       };
 
     }
 
     switch (intent) {
+
+      // ------------------------
+      // Moins cher
+      // ------------------------
 
       case IntentType.CHEAPEST_RESULT: {
 
@@ -97,17 +90,17 @@ export class ResultActionService {
         context.selectedResult = result;
 
         return {
-
           status: 'completed',
-
           reply:
             `Le modèle le moins cher est ${result.label} à ${result.price} F CFP.`,
-
           result,
-
         };
 
       }
+
+      // ------------------------
+      // Plus cher
+      // ------------------------
 
       case IntentType.MOST_EXPENSIVE_RESULT: {
 
@@ -116,17 +109,17 @@ export class ResultActionService {
         context.selectedResult = result;
 
         return {
-
           status: 'completed',
-
           reply:
             `Le modèle le plus cher est ${result.label} à ${result.price} F CFP.`,
-
           result,
-
         };
 
       }
+
+      // ------------------------
+      // Vérification du stock
+      // ------------------------
 
       case IntentType.CHECK_STOCK: {
 
@@ -138,31 +131,54 @@ export class ResultActionService {
           return null;
         }
 
+        if (result.quantity <= 0) {
+
+          return {
+            status: 'completed',
+            reply:
+              `${result.label} n'est actuellement plus disponible en stock.`,
+            result,
+          };
+
+        }
+
+        if (result.quantity === 1) {
+
+          return {
+            status: 'completed',
+            reply:
+              `Oui, il reste un exemplaire du ${result.label} en stock.`,
+            result,
+          };
+
+        }
+
         return {
-
           status: 'completed',
-
           reply:
-            `Oui, il reste ${result.quantity} exemplaire(s) du ${result.label} en stock.`,
-
+            `Oui, il reste ${result.quantity} exemplaires du ${result.label} en stock.`,
           result,
-
         };
 
       }
+
+      // ------------------------
+      // Le client passe au magasin
+      // ------------------------
 
       case IntentType.VISIT_STORE: {
 
         return {
-
           status: 'visit_store',
-
           reply:
             'Très bien. Nous vous attendrons au magasin. Si vous le souhaitez, un conseiller pourra préparer un devis avant votre arrivée.',
-
         };
 
       }
+
+      // ------------------------
+      // Création du devis
+      // ------------------------
 
       case IntentType.CREATE_QUOTE: {
 
@@ -174,26 +190,29 @@ export class ResultActionService {
           return null;
         }
 
+        const item = {
+          sku: result.sku,
+          label: result.label,
+          brand: result.brand,
+          quantity: 1,
+          unitPrice: result.price ?? 0,
+        };
+
+        context.quote = {
+          createdAt: new Date(),
+          items: [item],
+          total: item.quantity * item.unitPrice,
+        };
+
         return {
-
           status: 'quote',
-
           reply:
             `Très bien, je prépare votre devis.\n\n` +
-            `Véhicule : ${context.vehicle.make} ${context.vehicle.model}\n` +
-            `Pièce : ${result.label}\n` +
-            `Prix : ${result.price} F CFP`,
-
-          quote: {
-
-            vehicle: context.vehicle,
-
-            product: result,
-
-            createdAt: new Date(),
-
-          },
-
+            `Véhicule : ${context.vehicle?.make} ${context.vehicle?.model}\n` +
+            `Pièce : ${item.label}\n` +
+            `Référence : ${item.sku}\n` +
+            `Prix : ${item.unitPrice} F CFP`,
+          quote: context.quote,
         };
 
       }
