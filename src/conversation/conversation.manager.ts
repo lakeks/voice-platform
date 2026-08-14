@@ -54,45 +54,20 @@ export class ConversationManager {
 
     context.intent = intent;
 
+    const parsed = await this.parserService.parse(message);
+
+    const action = this.resultActionService.handle(
+      context,
+      parsed,
+      intent,
+    );
+
+    if (action) {
+      this.conversationMemory.save(context);
+      return action;
+    }
+
     switch (intent) {
-
-      case IntentType.CHEAPEST_RESULT: {
-
-        if (!context.results?.length) {
-          return {
-            status: 'no_results',
-            reply: "Je n'ai aucun résultat en mémoire.",
-          };
-        }
-
-        const cheapest = this.resultActionService.cheapest(context.results);
-
-        return {
-          status: 'completed',
-          reply: `Le modèle le moins cher est ${cheapest.label} à ${cheapest.price} F CFP.`,
-          result: cheapest,
-        };
-
-      }
-
-      case IntentType.MOST_EXPENSIVE_RESULT: {
-
-        if (!context.results?.length) {
-          return {
-            status: 'no_results',
-            reply: "Je n'ai aucun résultat en mémoire.",
-          };
-        }
-
-        const mostExpensive = this.resultActionService.mostExpensive(context.results);
-
-        return {
-          status: 'completed',
-          reply: `Le modèle le plus cher est ${mostExpensive.label} à ${mostExpensive.price} F CFP.`,
-          result: mostExpensive,
-        };
-
-      }
 
       case IntentType.GREETING:
 
@@ -143,8 +118,6 @@ export class ConversationManager {
 
     }
 
-    const parsed = await this.parserService.parse(message);
-
     context = this.contextService.update(
       context,
       parsed,
@@ -153,17 +126,21 @@ export class ConversationManager {
     this.conversationMemory.save(context);
 
     if (context.state === ConversationState.WAITING_PRODUCT) {
+
       return {
         status: 'need_information',
         reply: 'Quelle pièce recherchez-vous ?',
       };
+
     }
 
     if (context.state === ConversationState.WAITING_VEHICLE) {
+
       return {
         status: 'need_information',
         reply: 'Pour quel véhicule recherchez-vous cette pièce ?',
       };
+
     }
 
     const results = await this.searchService.search({
@@ -172,7 +149,6 @@ export class ConversationManager {
     });
 
     context.results = results;
-
     context.state = ConversationState.FINISHED;
 
     this.conversationMemory.save(context);
@@ -181,13 +157,9 @@ export class ConversationManager {
 
     if (results.length > 0) {
 
-      const first = results[0];
-
-      reply = this.responseService.buildSearchResult(
+      reply = this.responseService.buildResultList(
         `${context.vehicle?.make} ${context.vehicle?.model}`,
-        first.label,
-        first.quantity,
-        first.price,
+        results,
       );
 
     }

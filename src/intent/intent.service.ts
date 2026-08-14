@@ -12,6 +12,41 @@ export class IntentService {
 
     const text = message.toLowerCase();
 
+    // Demande de devis
+
+    if (
+      text.includes('devis') ||
+      text.includes('préparez') ||
+      text.includes('preparer un devis') ||
+      text.includes('préparer un devis')
+    ) {
+      return IntentType.CREATE_QUOTE;
+    }
+
+    // Disponibilité
+
+    if (
+      text.includes('stock') ||
+      text.includes('disponible') ||
+      text.includes('disponibilité') ||
+      text.includes('vous en avez')
+    ) {
+      return IntentType.CHECK_STOCK;
+    }
+
+    // Le client va passer au magasin
+
+    if (
+      text.includes('je passe') ||
+      text.includes('je viendrai') ||
+      text.includes('je viens') ||
+      text.includes('cet après-midi') ||
+      text.includes('ce matin') ||
+      text.includes('demain')
+    ) {
+      return IntentType.VISIT_STORE;
+    }
+
     // Le moins cher
 
     if (
