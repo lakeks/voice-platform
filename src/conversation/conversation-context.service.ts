@@ -10,11 +10,17 @@ export class ConversationContextService {
     context: ConversationContext,
     parsed: {
       product?: string;
+
       brand?: string;
+
       vehicle?: {
+        id: number;
         make: string;
         model: string;
+        createdAt: Date;
       };
+
+      quantity?: number;
     },
   ): ConversationContext {
 
@@ -30,21 +36,36 @@ export class ConversationContextService {
       context.vehicle = parsed.vehicle;
     }
 
-    // Détermination automatique de l'état
+    if (
+      parsed.quantity !== undefined &&
+      parsed.quantity > 0
+    ) {
+      context.quantity = parsed.quantity;
+    }
+
+    // ========================
+    // DÉTERMINATION ÉTAT
+    // ========================
 
     if (!context.product) {
-      context.state = ConversationState.WAITING_PRODUCT;
+
+      context.state =
+        ConversationState.WAITING_PRODUCT;
+
       return context;
     }
 
     if (!context.vehicle) {
-      context.state = ConversationState.WAITING_VEHICLE;
+
+      context.state =
+        ConversationState.WAITING_VEHICLE;
+
       return context;
     }
 
-    context.state = ConversationState.SEARCHING;
+    context.state =
+      ConversationState.SEARCHING;
 
     return context;
   }
-
 }

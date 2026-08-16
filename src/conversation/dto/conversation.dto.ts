@@ -1,18 +1,15 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiHideProperty, ApiProperty } from '@nestjs/swagger';
 import { IsOptional, IsString } from 'class-validator';
 
 export class ConversationDto {
 
-  @ApiProperty({
-    example: 'call-123456',
-    required: false,
-  })
+  @ApiHideProperty()
   @IsOptional()
   @IsString()
   sessionId?: string;
 
   @ApiProperty({
-    example: 'je cherche un alternateur bosch pour une clio 4',
+    example: 'Je cherche un alternateur bosch pour une clio 4',
   })
   @IsString()
   message: string;

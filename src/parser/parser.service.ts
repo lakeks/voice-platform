@@ -15,48 +15,56 @@ export class ParserService {
 
   async parse(question: string): Promise<ParserResult> {
 
-    const normalizedQuestion = question.toLowerCase().trim();
+    const normalizedQuestion = question
+      .toLowerCase()
+      .trim();
 
     const words = normalizedQuestion
       .replace(/[.,!?;:]/g, '')
       .split(/\s+/);
 
-    // Catalogue
-
     const products = await this.catalogService.getProducts();
     const brands = await this.catalogService.getBrands();
-
-    // Véhicules
-
     const vehicles = await this.vehicleService.findAll();
 
-    // Produit
+    // ========================
+    // PRODUIT
+    // ========================
 
-    const product = products.find(product =>
-      normalizedQuestion.includes(product.toLowerCase()),
+    const product = products.find(
+      item =>
+        normalizedQuestion.includes(
+          item.toLowerCase(),
+        ),
     );
 
-    // Marque
+    // ========================
+    // MARQUE
+    // ========================
 
-    const brand = brands.find(brand =>
-      words.includes(brand.toLowerCase()),
+    const brand = brands.find(
+      item =>
+        words.includes(item.toLowerCase()),
     );
 
-    // Véhicule
+    // ========================
+    // VÉHICULE
+    // ========================
 
-    const vehicle = vehicles.find(vehicle => {
+    const vehicle = vehicles.find(item => {
 
-      if (!vehicle.model || vehicle.model.trim() === '') {
+      if (!item.model || item.model.trim() === '') {
         return false;
       }
 
       return normalizedQuestion.includes(
-        vehicle.model.toLowerCase(),
+        item.model.toLowerCase(),
       );
-
     });
 
-    // Position demandée
+    // ========================
+    // POSITION
+    // ========================
 
     let position: number | undefined;
 
@@ -69,6 +77,7 @@ export class ParserService {
 
     if (
       normalizedQuestion.includes('deuxième') ||
+      normalizedQuestion.includes('deuxieme') ||
       normalizedQuestion.includes('second')
     ) {
       position = 2;
@@ -81,20 +90,88 @@ export class ParserService {
       position = 3;
     }
 
+    // ========================
+    // QUANTITÉ
+    // ========================
+
+    let quantity: number | undefined;
+
+    if (product) {
+
+      const productPattern =
+        `${product.toLowerCase()}s?`;
+
+      const writtenQuantities: Record<string, number> = {
+        une: 1,
+        un: 1,
+        deux: 2,
+        trois: 3,
+        quatre: 4,
+        cinq: 5,
+        six: 6,
+        sept: 7,
+        huit: 8,
+        neuf: 9,
+        dix: 10,
+      };
+
+      // Quantités écrites
+
+      for (
+        const [word, value]
+        of Object.entries(writtenQuantities)
+      ) {
+
+        const pattern = new RegExp(
+          `\\b${word}\\b(?:\\s+\\w+){0,3}\\s+${productPattern}\\b`,
+          'i',
+        );
+
+        if (pattern.test(normalizedQuestion)) {
+          quantity = value;
+          break;
+        }
+      }
+
+      // Quantité numérique
+
+      if (quantity === undefined) {
+
+        const numericPattern = new RegExp(
+          `\\b(\\d+)\\b(?:\\s+\\w+){0,3}\\s+${productPattern}\\b`,
+          'i',
+        );
+
+        const match =
+          normalizedQuestion.match(numericPattern);
+
+        if (match) {
+          quantity = Number(match[1]);
+        }
+      }
+
+      // Une / un produit
+
+      if (quantity === undefined) {
+
+        const singularPattern = new RegExp(
+          `\\b(?:une|un)\\b(?:\\s+\\w+){0,3}\\s+${productPattern}\\b`,
+          'i',
+        );
+
+        if (singularPattern.test(normalizedQuestion)) {
+          quantity = 1;
+        }
+      }
+    }
+
     return {
-
       product,
-
       brand,
-
       vehicle,
-
       words,
-
       position,
-
+      quantity,
     };
-
   }
-
 }

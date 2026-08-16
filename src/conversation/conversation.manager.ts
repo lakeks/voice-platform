@@ -27,9 +27,12 @@ export class ConversationManager {
     private readonly resultActionService: ResultActionService,
   ) {}
 
-  private loadOrCreateContext(sessionId: string): ConversationContext {
+  private loadOrCreateContext(
+    sessionId: string,
+  ): ConversationContext {
 
-    const existing = this.conversationMemory.get(sessionId);
+    const existing =
+      this.conversationMemory.get(sessionId);
 
     if (existing) {
       return existing;
@@ -40,128 +43,466 @@ export class ConversationManager {
       state: ConversationState.IDLE,
       intent: IntentType.UNKNOWN,
     };
-
   }
 
-  async process(message: string, sessionId = 'default') {
+  async process(
+    message: string,
+    sessionId = 'default',
+  ) {
 
-    let context = this.loadOrCreateContext(sessionId);
+    let context =
+      this.loadOrCreateContext(sessionId);
 
-    const intent = this.intentService.detect(
-      message,
-      context.state,
-    );
+    // ==========================================
+    // INTENTION
+    // ==========================================
+
+    const intent =
+      this.intentService.detect(
+        message,
+        context.state,
+      );
 
     context.intent = intent;
 
-    const parsed = await this.parserService.parse(message);
+    // ==========================================
+    // PARSING
+    // ==========================================
 
-    const action = this.resultActionService.handle(
-      context,
-      parsed,
-      intent,
-    );
+    const parsed =
+      await this.parserService.parse(message);
 
-    if (action) {
-      this.conversationMemory.save(context);
-      return action;
-    }
+    // ==========================================
+    // NOUVELLE PIÈCE À AJOUTER
+    // ==========================================
+    //
+    // Exemple :
+    //
+    // Devis actuel :
+    // Alternateur Valeo
+    //
+    // Message :
+    // "Ajoutez une batterie Bosch"
+    //
+    // Dans ce cas, il ne faut surtout PAS envoyer
+    // la demande aux anciens résultats.
+    //
+    // Il faut faire une NOUVELLE recherche avec :
+    //
+    // product = batterie
+    // brand   = Bosch
+    //
+    // puis ajouter le résultat au devis existant.
+    //
 
-    switch (intent) {
+    const isNewPartSearch =
+      (
+        intent === IntentType.SEARCH_PART ||
+        intent === IntentType.ADD_QUOTE_ITEM
+      ) &&
+      !!parsed.product;
 
-      case IntentType.GREETING:
+    if (isNewPartSearch) {
 
-        context.state = ConversationState.GREETING;
+      // Si c'est une demande d'ajout au devis,
+      // un devis doit déjà exister.
+
+      if (
+        intent === IntentType.ADD_QUOTE_ITEM &&
+        !context.quote
+      ) {
+
         this.conversationMemory.save(context);
 
         return {
-          status: 'greeting',
-          reply: 'Bonjour ! Comment puis-je vous aider ?',
+          status: 'no_quote',
+          reply:
+            "Je n'ai pas encore de devis en cours.",
         };
+      }
+
+      // ----------------------------------------
+      // Mise à jour du produit et de la marque
+      // ----------------------------------------
+
+      if (parsed.product) {
+        context.product =
+          parsed.product;
+      }
+
+      if (parsed.brand) {
+        context.brand =
+          parsed.brand;
+      }
+
+      if (parsed.vehicle) {
+        context.vehicle =
+          parsed.vehicle;
+      }
+
+      // ----------------------------------------
+      // Nouvelle recherche
+      // ----------------------------------------
+
+      const results =
+        await this.searchService.search({
+          product: parsed.product,
+          brand: parsed.brand,
+        });
+
+      context.results =
+        results;
+
+      // ----------------------------------------
+      // Aucun résultat
+      // ----------------------------------------
+
+      if (!results.length) {
+
+        this.conversationMemory.save(context);
+
+        return {
+          status: 'no_results',
+          reply:
+            parsed.brand
+              ? `Je n'ai trouvé aucun modèle ${parsed.brand}.`
+              : 'Je n\'ai trouvé aucune pièce correspondante.',
+          results,
+        };
+      }
+
+      // ----------------------------------------
+      // AJOUT AU DEVIS
+      // ----------------------------------------
+
+      if (
+        intent === IntentType.ADD_QUOTE_ITEM &&
+        context.quote
+      ) {
+
+        const result =
+          results[0];
+
+        const quantity =
+          parsed.quantity ?? 1;
+
+        const existingItem =
+          context.quote.items.find(
+            (item: any) =>
+              item.sku === result.sku,
+          );
+
+        if (existingItem) {
+
+          existingItem.quantity +=
+            quantity;
+
+        } else {
+
+          context.quote.items.push({
+            sku: result.sku,
+            label: result.label,
+            brand: result.brand,
+            quantity,
+            unitPrice:
+              result.price ?? 0,
+          });
+        }
+
+        // --------------------------------------
+        // Recalcul du total
+        // --------------------------------------
+
+        context.quote.total =
+          context.quote.items.reduce(
+            (
+              total: number,
+              item: any,
+            ) =>
+              total +
+              item.quantity *
+              item.unitPrice,
+            0,
+          );
+
+        context.selectedResult =
+          result;
+
+        context.quantity =
+          undefined;
+
+        context.state =
+          ConversationState.FINISHED;
+
+        this.conversationMemory.save(
+          context,
+        );
+
+        return {
+          status: 'quote_updated',
+
+          reply:
+            `J'ai ajouté ${quantity} ${result.label} à votre devis. ` +
+            `Le nouveau total est de ${context.quote.total} F CFP.`,
+
+          result,
+
+          quote:
+            context.quote,
+        };
+      }
+
+      // ----------------------------------------
+      // Recherche normale
+      // ----------------------------------------
+
+      context.state =
+        ConversationState.FINISHED;
+
+      this.conversationMemory.save(
+        context,
+      );
+
+      let reply =
+        'Aucune pièce trouvée.';
+
+      if (results.length > 0) {
+
+        reply =
+          this.responseService.buildResultList(
+            `${context.vehicle?.make} ${context.vehicle?.model}`,
+            results,
+          );
+      }
+
+      return {
+        status: 'completed',
+        reply,
+        query: context,
+        results,
+      };
+    }
+
+    // ==========================================
+    // ACTIONS SUR LES RÉSULTATS EXISTANTS
+    // ==========================================
+    //
+    // Important :
+    // Cette partie n'est exécutée que lorsqu'il
+    // ne s'agit PAS d'une nouvelle recherche de pièce.
+    //
+    // Exemple :
+    // "Je prends le premier"
+    // "Enlève la batterie"
+    // "Quel est le total ?"
+    //
+
+    const action =
+      this.resultActionService.handle(
+        context,
+        parsed,
+        intent,
+      );
+
+    if (action) {
+
+      this.conversationMemory.save(
+        context,
+      );
+
+      return action;
+    }
+
+    // ==========================================
+    // INTENTIONS DIRECTES
+    // ==========================================
+
+    switch (intent) {
+
+      // ----------------------------------------
+      // Bonjour
+      // ----------------------------------------
+
+      case IntentType.GREETING:
+
+        context.state =
+          ConversationState.GREETING;
+
+        this.conversationMemory.save(
+          context,
+        );
+
+        return {
+          status: 'greeting',
+          reply:
+            'Bonjour ! Comment puis-je vous aider ?',
+        };
+
+
+      // ----------------------------------------
+      // Merci
+      // ----------------------------------------
 
       case IntentType.THANKS:
 
         return {
           status: 'thanks',
-          reply: 'Avec plaisir !',
+          reply:
+            'Avec plaisir !',
         };
+
+
+      // ----------------------------------------
+      // Au revoir
+      // ----------------------------------------
 
       case IntentType.GOODBYE:
 
-        context.state = ConversationState.FINISHED;
-        this.conversationMemory.clear(sessionId);
+        context.state =
+          ConversationState.FINISHED;
+
+        this.conversationMemory.clear(
+          sessionId,
+        );
 
         return {
           status: 'goodbye',
-          reply: 'Au revoir et bonne journée !',
+          reply:
+            'Au revoir et bonne journée !',
         };
+
+
+      // ----------------------------------------
+      // Transfert humain
+      // ----------------------------------------
 
       case IntentType.HUMAN_TRANSFER:
 
-        context.state = ConversationState.TRANSFER_HUMAN;
-        this.conversationMemory.save(context);
+        context.state =
+          ConversationState.TRANSFER_HUMAN;
+
+        this.conversationMemory.save(
+          context,
+        );
 
         return {
           status: 'human_transfer',
-          reply: 'Je vous mets en relation avec un conseiller.',
+          reply:
+            'Je vous mets en relation avec un conseiller.',
         };
 
+
+      // ----------------------------------------
+      // Recherche de pièce
+      // ----------------------------------------
+
       case IntentType.SEARCH_PART:
+
         break;
+
+
+      // ----------------------------------------
+      // Ajout au devis
+      // ----------------------------------------
+
+      case IntentType.ADD_QUOTE_ITEM:
+
+        return {
+          status: 'need_information',
+          reply:
+            'Quelle pièce souhaitez-vous ajouter au devis ?',
+        };
+
+
+      // ----------------------------------------
+      // Par défaut
+      // ----------------------------------------
 
       default:
 
         return {
           status: 'unknown',
-          reply: "Je n'ai pas compris votre demande.",
+          reply:
+            "Je n'ai pas compris votre demande.",
         };
-
     }
 
-    context = this.contextService.update(
+    // ==========================================
+    // MISE À JOUR DU CONTEXTE
+    // ==========================================
+
+    context =
+      this.contextService.update(
+        context,
+        parsed,
+      );
+
+    this.conversationMemory.save(
       context,
-      parsed,
     );
 
-    this.conversationMemory.save(context);
+    // ==========================================
+    // INFORMATIONS MANQUANTES
+    // ==========================================
 
-    if (context.state === ConversationState.WAITING_PRODUCT) {
-
-      return {
-        status: 'need_information',
-        reply: 'Quelle pièce recherchez-vous ?',
-      };
-
-    }
-
-    if (context.state === ConversationState.WAITING_VEHICLE) {
+    if (
+      context.state ===
+      ConversationState.WAITING_PRODUCT
+    ) {
 
       return {
         status: 'need_information',
-        reply: 'Pour quel véhicule recherchez-vous cette pièce ?',
+        reply:
+          'Quelle pièce recherchez-vous ?',
       };
-
     }
 
-    const results = await this.searchService.search({
-      product: context.product,
-      brand: context.brand,
-    });
+    if (
+      context.state ===
+      ConversationState.WAITING_VEHICLE
+    ) {
 
-    context.results = results;
-    context.state = ConversationState.FINISHED;
+      return {
+        status: 'need_information',
+        reply:
+          'Pour quel véhicule recherchez-vous cette pièce ?',
+      };
+    }
 
-    this.conversationMemory.save(context);
+    // ==========================================
+    // RECHERCHE
+    // ==========================================
 
-    let reply = 'Aucune pièce trouvée.';
+    const results =
+      await this.searchService.search({
+        product: context.product,
+        brand: context.brand,
+      });
+
+    context.results =
+      results;
+
+    context.state =
+      ConversationState.FINISHED;
+
+    this.conversationMemory.save(
+      context,
+    );
+
+    // ==========================================
+    // RÉPONSE
+    // ==========================================
+
+    let reply =
+      'Aucune pièce trouvée.';
 
     if (results.length > 0) {
 
-      reply = this.responseService.buildResultList(
-        `${context.vehicle?.make} ${context.vehicle?.model}`,
-        results,
-      );
-
+      reply =
+        this.responseService.buildResultList(
+          `${context.vehicle?.make} ${context.vehicle?.model}`,
+          results,
+        );
     }
 
     return {
@@ -170,7 +511,5 @@ export class ConversationManager {
       query: context,
       results,
     };
-
   }
-
 }

@@ -15,4 +15,5 @@ export interface ParserResult {
 
   position?: number;
 
+  quantity?: number;
 }

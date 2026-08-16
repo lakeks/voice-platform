@@ -9,8 +9,18 @@ export class ConversationService {
     private readonly conversationManager: ConversationManager,
   ) {}
 
-  async process(message: string, sessionId?: string) {
-    return this.conversationManager.process(message, sessionId);
-  }
+  async process(
+    message: string,
+    sessionId?: string,
+  ) {
 
+    const currentSessionId =
+      sessionId ??
+      crypto.randomUUID();
+
+    return await this.conversationManager.process(
+      message,
+      currentSessionId,
+    );
+  }
 }

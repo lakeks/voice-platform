@@ -15,69 +15,174 @@ export class ResultActionService {
       return null;
     }
 
-    // ------------------------
-    // Récapitulatif du devis
-    // ------------------------
+    // ==========================================
+    // MODIFIER UNE QUANTITÉ
+    // ==========================================
 
-    if (intent === IntentType.QUOTE_SUMMARY) {
+    if (
+      intent ===
+      IntentType.MODIFY_QUOTE_QUANTITY
+    ) {
 
-      if (!context.quote || !context.quote.items?.length) {
-
-        return {
-          status: 'no_quote',
-          reply: "Je n'ai pas encore de devis en cours.",
-        };
-
-      }
-
-      const items = context.quote.items
-        .map(
-          (item: any) =>
-            `${item.quantity} ${item.label} à ${item.unitPrice} F CFP`,
-        )
-        .join(', ');
-
-      return {
-        status: 'quote_summary',
-        reply:
-          `Bien sûr. Sur votre devis, vous avez : ${items}. ` +
-          `Le total est de ${context.quote.total} F CFP.`,
-        quote: context.quote,
-      };
-
-    }
-
-    // ------------------------
-    // Suppression d'une pièce
-    // ------------------------
-
-    if (intent === IntentType.REMOVE_QUOTE_ITEM) {
-
-      if (!context.quote || !context.quote.items?.length) {
+      if (
+        !context.quote ||
+        !context.quote.items?.length
+      ) {
 
         return {
           status: 'no_quote',
-          reply: "Je n'ai pas encore de devis en cours.",
+          reply:
+            "Je n'ai pas encore de devis en cours.",
         };
-
       }
 
-      const product = parsed.product?.toLowerCase();
+      const product =
+        parsed.product?.toLowerCase();
+
+      const quantity =
+        parsed.quantity;
 
       if (!product) {
 
         return {
           status: 'need_information',
           reply:
-            "Quelle pièce souhaitez-vous retirer du devis ?",
+            'Quelle pièce souhaitez-vous modifier ?',
         };
-
       }
 
-      const index = context.quote.items.findIndex(
-        (item: any) =>
-          item.label?.toLowerCase().includes(product),
+      if (
+        !quantity ||
+        quantity < 1
+      ) {
+
+        return {
+          status: 'need_information',
+          reply:
+            'Quelle quantité souhaitez-vous ?',
+        };
+      }
+
+      const item =
+        context.quote.items.find(
+          (quoteItem: any) =>
+            quoteItem.label
+              ?.toLowerCase()
+              .includes(product),
+        );
+
+      if (!item) {
+
+        return {
+          status: 'not_found',
+          reply:
+            `Je ne trouve pas ${parsed.product} dans votre devis.`,
+        };
+      }
+
+      item.quantity =
+        quantity;
+
+      this.recalculateQuote(
+        context.quote,
       );
+
+      context.quantity =
+        undefined;
+
+      return {
+        status: 'quote_updated',
+
+        reply:
+          `Très bien. Je passe ${item.label} à ${quantity} exemplaires. ` +
+          `Le nouveau total est de ${context.quote.total} F CFP.`,
+
+        result: item,
+
+        quote: context.quote,
+      };
+    }
+
+    // ==========================================
+    // RÉCAPITULATIF DU DEVIS
+    // ==========================================
+
+    if (
+      intent ===
+      IntentType.QUOTE_SUMMARY
+    ) {
+
+      if (
+        !context.quote ||
+        !context.quote.items?.length
+      ) {
+
+        return {
+          status: 'no_quote',
+          reply:
+            "Je n'ai pas encore de devis en cours.",
+        };
+      }
+
+      const items =
+        context.quote.items
+          .map(
+            (item: any) =>
+              `${item.quantity} ${item.label} à ${item.unitPrice} F CFP`,
+          )
+          .join(', ');
+
+      return {
+        status: 'quote_summary',
+
+        reply:
+          `Bien sûr. Sur votre devis, vous avez : ${items}. ` +
+          `Le total est de ${context.quote.total} F CFP.`,
+
+        quote: context.quote,
+      };
+    }
+
+    // ==========================================
+    // SUPPRESSION D'UNE PIÈCE
+    // ==========================================
+
+    if (
+      intent ===
+      IntentType.REMOVE_QUOTE_ITEM
+    ) {
+
+      if (
+        !context.quote ||
+        !context.quote.items?.length
+      ) {
+
+        return {
+          status: 'no_quote',
+          reply:
+            "Je n'ai pas encore de devis en cours.",
+        };
+      }
+
+      const product =
+        parsed.product?.toLowerCase();
+
+      if (!product) {
+
+        return {
+          status: 'need_information',
+          reply:
+            'Quelle pièce souhaitez-vous retirer du devis ?',
+        };
+      }
+
+      const index =
+        context.quote.items.findIndex(
+          (item: any) =>
+            item.label
+              ?.toLowerCase()
+              .includes(product),
+        );
 
       if (index === -1) {
 
@@ -86,48 +191,58 @@ export class ResultActionService {
           reply:
             `Je ne trouve pas ${parsed.product} dans votre devis.`,
         };
-
       }
 
-      const removed = context.quote.items.splice(index, 1)[0];
+      const removed =
+        context.quote.items.splice(
+          index,
+          1,
+        )[0];
 
-      context.quote.total = context.quote.items.reduce(
-        (total: number, item: any) =>
-          total + (item.quantity * item.unitPrice),
-        0,
+      this.recalculateQuote(
+        context.quote,
       );
 
-      if (context.quote.items.length === 0) {
+      if (
+        context.quote.items.length === 0
+      ) {
 
         return {
           status: 'quote_updated',
+
           reply:
             `${removed.label} a été retiré de votre devis. ` +
             `Votre devis ne contient plus aucune pièce.`,
+
           removed,
+
           quote: context.quote,
         };
-
       }
 
       return {
         status: 'quote_updated',
+
         reply:
           `${removed.label} a été retiré de votre devis. ` +
           `Le nouveau total est de ${context.quote.total} F CFP.`,
+
         removed,
+
         quote: context.quote,
       };
-
     }
 
-    // ------------------------
-    // Sélection par position
-    // ------------------------
+    // ==========================================
+    // SÉLECTION PAR POSITION
+    // ==========================================
 
     if (parsed.position) {
 
-      const result = context.results[parsed.position - 1];
+      const result =
+        context.results[
+          parsed.position - 1
+        ];
 
       if (!result) {
 
@@ -136,73 +251,72 @@ export class ResultActionService {
           reply:
             `Je n'ai pas trouvé le résultat numéro ${parsed.position}.`,
         };
-
       }
 
-      context.selectedResult = result;
+      context.selectedResult =
+        result;
 
-      // Si un devis existe déjà, on ajoute le produit au devis
+      // ------------------------------------------
+      // SI UN DEVIS EXISTE :
+      // AJOUTER LA PIÈCE AU DEVIS
+      // ------------------------------------------
 
       if (context.quote) {
 
-        const existingItem = context.quote.items.find(
-          (item: any) => item.sku === result.sku,
-        );
+        const quantity =
+          context.quantity ?? 1;
 
-        if (existingItem) {
+        const quote =
+          this.addResultToQuote(
+            context,
+            result,
+            quantity,
+          );
 
-          existingItem.quantity += 1;
-
-        } else {
-
-          context.quote.items.push({
-            sku: result.sku,
-            label: result.label,
-            brand: result.brand,
-            quantity: 1,
-            unitPrice: result.price ?? 0,
-          });
-
-        }
-
-        context.quote.total = context.quote.items.reduce(
-          (total: number, item: any) =>
-            total + (item.quantity * item.unitPrice),
-          0,
-        );
+        context.quantity =
+          undefined;
 
         return {
           status: 'quote_updated',
-          reply:
-            `J'ai ajouté ${result.label} à votre devis. ` +
-            `Le nouveau total est de ${context.quote.total} F CFP.`,
-          result,
-          quote: context.quote,
-        };
 
+          reply:
+            `J'ai ajouté ${quantity} ${result.label} à votre devis. ` +
+            `Le nouveau total est de ${quote.total} F CFP.`,
+
+          result,
+
+          quote,
+        };
       }
+
+      // ------------------------------------------
+      // PAS DE DEVIS :
+      // SIMPLE SÉLECTION
+      // ------------------------------------------
 
       return {
         status: 'completed',
+
         reply:
           `Voici le ${this.ordinal(parsed.position)} modèle : ` +
           `${result.label} à ${result.price} F CFP.`,
+
         result,
       };
-
     }
 
-    // ------------------------
-    // Filtre par marque
-    // ------------------------
+    // ==========================================
+    // FILTRE PAR MARQUE
+    // ==========================================
 
     if (parsed.brand) {
 
-      const results = context.results.filter(
-        (item: any) =>
-          item.brand?.toLowerCase() ===
-          parsed.brand.toLowerCase(),
-      );
+      const results =
+        context.results.filter(
+          (item: any) =>
+            item.brand?.toLowerCase() ===
+            parsed.brand.toLowerCase(),
+        );
 
       if (!results.length) {
 
@@ -211,51 +325,78 @@ export class ResultActionService {
           reply:
             `Je n'ai trouvé aucun modèle ${parsed.brand}.`,
         };
-
       }
 
-      context.results = results;
+      context.results =
+        results;
 
       return {
         status: 'completed',
+
         reply:
           `J'ai trouvé ${results.length} modèle(s) ${parsed.brand}.`,
+
         results,
       };
-
     }
+
+    // ==========================================
+    // AUTRES ACTIONS
+    // ==========================================
 
     switch (intent) {
 
+      // ------------------------------------------
+      // MOINS CHER
+      // ------------------------------------------
+
       case IntentType.CHEAPEST_RESULT: {
 
-        const result = this.cheapest(context.results);
+        const result =
+          this.cheapest(
+            context.results,
+          );
 
-        context.selectedResult = result;
+        context.selectedResult =
+          result;
 
         return {
           status: 'completed',
+
           reply:
             `Le modèle le moins cher est ${result.label} à ${result.price} F CFP.`,
+
           result,
         };
-
       }
+
+      // ------------------------------------------
+      // PLUS CHER
+      // ------------------------------------------
 
       case IntentType.MOST_EXPENSIVE_RESULT: {
 
-        const result = this.mostExpensive(context.results);
+        const result =
+          this.mostExpensive(
+            context.results,
+          );
 
-        context.selectedResult = result;
+        context.selectedResult =
+          result;
 
         return {
           status: 'completed',
+
           reply:
             `Le modèle le plus cher est ${result.label} à ${result.price} F CFP.`,
+
           result,
         };
-
       }
+
+      // ------------------------------------------
+      // STOCK
+      // ------------------------------------------
 
       case IntentType.CHECK_STOCK: {
 
@@ -271,42 +412,53 @@ export class ResultActionService {
 
           return {
             status: 'completed',
+
             reply:
               `${result.label} n'est actuellement plus disponible en stock.`,
+
             result,
           };
-
         }
 
         if (result.quantity === 1) {
 
           return {
             status: 'completed',
+
             reply:
               `Oui, il reste un exemplaire du ${result.label} en stock.`,
+
             result,
           };
-
         }
 
         return {
           status: 'completed',
+
           reply:
             `Oui, il reste ${result.quantity} exemplaires du ${result.label} en stock.`,
+
           result,
         };
-
       }
+
+      // ------------------------------------------
+      // VISITE MAGASIN
+      // ------------------------------------------
 
       case IntentType.VISIT_STORE: {
 
         return {
           status: 'visit_store',
+
           reply:
             'Très bien. Nous vous attendrons au magasin. Si vous le souhaitez, un conseiller pourra préparer un devis avant votre arrivée.',
         };
-
       }
+
+      // ------------------------------------------
+      // CRÉATION DU DEVIS
+      // ------------------------------------------
 
       case IntentType.CREATE_QUOTE: {
 
@@ -318,63 +470,241 @@ export class ResultActionService {
           return null;
         }
 
+        const quantity =
+          context.quantity ?? 1;
+
         const item = {
           sku: result.sku,
           label: result.label,
           brand: result.brand,
-          quantity: 1,
+          quantity,
           unitPrice: result.price ?? 0,
         };
 
+        // ------------------------------------------
+        // SI UN DEVIS EXISTE DÉJÀ :
+        // AJOUTER AU DEVIS
+        // ------------------------------------------
+
+        if (
+          context.quote &&
+          context.quote.items?.length
+        ) {
+
+          const quote =
+            this.addResultToQuote(
+              context,
+              result,
+              quantity,
+            );
+
+          context.quantity =
+            undefined;
+
+          return {
+            status: 'quote_updated',
+
+            reply:
+              `J'ai ajouté ${quantity} ${result.label} à votre devis. ` +
+              `Le nouveau total est de ${quote.total} F CFP.`,
+
+            result,
+
+            quote,
+          };
+        }
+
+        // ------------------------------------------
+        // SINON :
+        // CRÉER LE PREMIER DEVIS
+        // ------------------------------------------
+
         context.quote = {
           createdAt: new Date(),
-          items: [item],
-          total: item.quantity * item.unitPrice,
+
+          items: [
+            item,
+          ],
+
+          total:
+            item.quantity *
+            item.unitPrice,
         };
+
+        context.quantity =
+          undefined;
 
         return {
           status: 'quote',
+
           reply:
             `Très bien, je prépare votre devis.\n\n` +
             `Véhicule : ${context.vehicle?.make} ${context.vehicle?.model}\n` +
             `Pièce : ${item.label}\n` +
             `Référence : ${item.sku}\n` +
-            `Prix : ${item.unitPrice} F CFP`,
-          quote: context.quote,
-        };
+            `Quantité : ${item.quantity}\n` +
+            `Prix unitaire : ${item.unitPrice} F CFP\n` +
+            `Total : ${context.quote.total} F CFP`,
 
+          quote:
+            context.quote,
+        };
+      }
+
+      // ------------------------------------------
+      // CONFIRMATION DU DEVIS
+      // ------------------------------------------
+
+      case IntentType.CONFIRM_QUOTE: {
+
+        if (
+          !context.quote ||
+          !context.quote.items?.length
+        ) {
+
+          return {
+            status: 'no_quote',
+
+            reply:
+              "Je n'ai pas encore de devis à valider.",
+          };
+        }
+
+        return {
+          status: 'quote_confirmed',
+
+          reply:
+            `Très bien, votre devis est validé. ` +
+            `Le montant total est de ${context.quote.total} F CFP.`,
+
+          quote:
+            context.quote,
+        };
       }
 
       default:
         return null;
+    }
+  }
 
+  // ==========================================
+  // AJOUTER UNE PIÈCE AU DEVIS
+  // ==========================================
+
+  addResultToQuote(
+    context: any,
+    result: any,
+    quantity: number,
+  ) {
+
+    if (!context.quote) {
+
+      context.quote = {
+        createdAt: new Date(),
+        items: [],
+        total: 0,
+      };
     }
 
-  }
+    if (!context.quote.items) {
+      context.quote.items = [];
+    }
 
-  cheapest(results: any[]) {
+    const existingItem =
+      context.quote.items.find(
+        (item: any) =>
+          item.sku === result.sku,
+      );
 
-    return results.reduce((a, b) =>
-      (a.price ?? Number.MAX_SAFE_INTEGER) <
-      (b.price ?? Number.MAX_SAFE_INTEGER)
-        ? a
-        : b,
+    if (existingItem) {
+
+      existingItem.quantity +=
+        quantity;
+
+    } else {
+
+      context.quote.items.push({
+        sku: result.sku,
+        label: result.label,
+        brand: result.brand,
+        quantity,
+        unitPrice: result.price ?? 0,
+      });
+    }
+
+    this.recalculateQuote(
+      context.quote,
     );
 
+    return context.quote;
   }
 
-  mostExpensive(results: any[]) {
+  // ==========================================
+  // RECALCUL DU TOTAL
+  // ==========================================
 
-    return results.reduce((a, b) =>
-      (a.price ?? 0) >
-      (b.price ?? 0)
-        ? a
-        : b,
+  recalculateQuote(
+    quote: any,
+  ) {
+
+    quote.total =
+      quote.items.reduce(
+        (
+          total: number,
+          item: any,
+        ) =>
+          total +
+          item.quantity *
+          item.unitPrice,
+        0,
+      );
+
+    return quote;
+  }
+
+  // ==========================================
+  // MOINS CHER
+  // ==========================================
+
+  cheapest(
+    results: any[],
+  ) {
+
+    return results.reduce(
+      (a, b) =>
+        (a.price ??
+          Number.MAX_SAFE_INTEGER) <
+        (b.price ??
+          Number.MAX_SAFE_INTEGER)
+          ? a
+          : b,
     );
-
   }
 
-  ordinal(position: number) {
+  // ==========================================
+  // PLUS CHER
+  // ==========================================
+
+  mostExpensive(
+    results: any[],
+  ) {
+
+    return results.reduce(
+      (a, b) =>
+        (a.price ?? 0) >
+        (b.price ?? 0)
+          ? a
+          : b,
+    );
+  }
+
+  // ==========================================
+  // ORDINAL
+  // ==========================================
+
+  ordinal(
+    position: number,
+  ) {
 
     switch (position) {
 
@@ -389,9 +719,6 @@ export class ResultActionService {
 
       default:
         return `${position}ème`;
-
     }
-
   }
-
 }

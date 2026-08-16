@@ -12,8 +12,18 @@ export class ConversationResponseService {
 
     const displayPrice = price ?? 0;
 
-    return `J'ai trouvé ${label} compatible avec votre ${vehicle}. Il reste ${quantity} exemplaire(s) en stock au prix de ${displayPrice} F CFP.`;
+    if (quantity === 1) {
 
+      return (
+        `J'ai trouvé ${label} compatible avec votre ${vehicle}. ` +
+        `Il reste un exemplaire en stock à ${displayPrice} F CFP.`
+      );
+    }
+
+    return (
+      `J'ai trouvé ${label} compatible avec votre ${vehicle}. ` +
+      `Il reste ${quantity} exemplaires en stock à ${displayPrice} F CFP l'unité.`
+    );
   }
 
   buildResultList(
@@ -21,31 +31,55 @@ export class ConversationResponseService {
     results: any[],
   ): string {
 
+    if (!results || results.length === 0) {
+
+      return (
+        `Je n'ai trouvé aucune pièce compatible ` +
+        `avec votre ${vehicle}.`
+      );
+    }
+
+    // ========================
+    // UN SEUL RÉSULTAT
+    // ========================
+
+    if (results.length === 1) {
+
+      const item = results[0];
+
+      const price = item.price ?? 0;
+
+      return (
+        `J'ai trouvé ${item.label} compatible avec votre ` +
+        `${vehicle}, à ${price} F CFP.`
+      );
+    }
+
+    // ========================
+    // PLUSIEURS RÉSULTATS
+    // ========================
+
     const lines: string[] = [];
 
-    const max = Math.min(results.length, 5);
+    const max =
+      Math.min(results.length, 5);
 
     for (let i = 0; i < max; i++) {
 
       const item = results[i];
 
       lines.push(
-        `${i + 1}. ${item.label} — ${item.price ?? 0} F CFP`,
+        `${i + 1}. ${item.label} à ${item.price ?? 0} F CFP`,
       );
-
     }
 
     return (
-      `J'ai trouvé ${results.length} pièce(s) compatible(s) avec votre ${vehicle}.\n\n` +
+      `J'ai trouvé ${results.length} pièces compatibles ` +
+      `avec votre ${vehicle}.\n` +
       lines.join('\n') +
-      `\n\nVous pouvez maintenant me dire :\n` +
-      `• le premier\n` +
-      `• le deuxième\n` +
-      `• le moins cher\n` +
-      `• le plus cher\n` +
-      `• je préfère Bosch`
+      `\nVous pouvez me dire laquelle vous préférez, ` +
+      `par exemple le premier, le deuxième, le moins cher ` +
+      `ou le plus cher.`
     );
-
   }
-
 }
