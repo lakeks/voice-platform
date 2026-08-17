@@ -18,9 +18,11 @@ import { IntentModule } from '../intent/intent.module';
     SearchModule,
     IntentModule,
   ],
+
   controllers: [
     ConversationController,
   ],
+
   providers: [
     ConversationService,
     ConversationManager,
@@ -28,6 +30,10 @@ import { IntentModule } from '../intent/intent.module';
     ConversationContextService,
     ConversationResponseService,
     ResultActionService,
+  ],
+
+  exports: [
+    ConversationManager,
   ],
 })
 export class ConversationModule {}

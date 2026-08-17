@@ -73,27 +73,8 @@ export class ConversationManager {
       await this.parserService.parse(message);
 
     // ==========================================
-    // NOUVELLE PIÈCE À AJOUTER
+    // NOUVELLE RECHERCHE DE PIÈCE
     // ==========================================
-    //
-    // Exemple :
-    //
-    // Devis actuel :
-    // Alternateur Valeo
-    //
-    // Message :
-    // "Ajoutez une batterie Bosch"
-    //
-    // Dans ce cas, il ne faut surtout PAS envoyer
-    // la demande aux anciens résultats.
-    //
-    // Il faut faire une NOUVELLE recherche avec :
-    //
-    // product = batterie
-    // brand   = Bosch
-    //
-    // puis ajouter le résultat au devis existant.
-    //
 
     const isNewPartSearch =
       (
@@ -166,7 +147,7 @@ export class ConversationManager {
           reply:
             parsed.brand
               ? `Je n'ai trouvé aucun modèle ${parsed.brand}.`
-              : 'Je n\'ai trouvé aucune pièce correspondante.',
+              : "Je n'ai trouvé aucune pièce correspondante.",
           results,
         };
       }
@@ -252,9 +233,9 @@ export class ConversationManager {
         };
       }
 
-      // ----------------------------------------
+      // --------------------------------------
       // Recherche normale
-      // ----------------------------------------
+      // --------------------------------------
 
       context.state =
         ConversationState.FINISHED;
@@ -268,9 +249,21 @@ export class ConversationManager {
 
       if (results.length > 0) {
 
+        // Si le véhicule a été reconnu,
+        // on utilise son nom.
+        //
+        // Sinon on utilise une formulation
+        // générique afin de ne JAMAIS envoyer
+        // "undefined undefined" au client.
+
+        const vehicleLabel =
+          context.vehicle
+            ? `${context.vehicle.make} ${context.vehicle.model}`
+            : 'votre véhicule';
+
         reply =
           this.responseService.buildResultList(
-            `${context.vehicle?.make} ${context.vehicle?.model}`,
+            vehicleLabel,
             results,
           );
       }
@@ -286,16 +279,6 @@ export class ConversationManager {
     // ==========================================
     // ACTIONS SUR LES RÉSULTATS EXISTANTS
     // ==========================================
-    //
-    // Important :
-    // Cette partie n'est exécutée que lorsqu'il
-    // ne s'agit PAS d'une nouvelle recherche de pièce.
-    //
-    // Exemple :
-    // "Je prends le premier"
-    // "Enlève la batterie"
-    // "Quel est le total ?"
-    //
 
     const action =
       this.resultActionService.handle(
@@ -498,9 +481,14 @@ export class ConversationManager {
 
     if (results.length > 0) {
 
+      const vehicleLabel =
+        context.vehicle
+          ? `${context.vehicle.make} ${context.vehicle.model}`
+          : 'votre véhicule';
+
       reply =
         this.responseService.buildResultList(
-          `${context.vehicle?.make} ${context.vehicle?.model}`,
+          vehicleLabel,
           results,
         );
     }

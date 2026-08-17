@@ -13,6 +13,7 @@ import { CatalogModule } from './catalog/catalog.module';
 import { VehicleModule } from './vehicle/vehicle.module';
 import { SearchModule } from './search/search.module';
 import { IntentModule } from './intent/intent.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { IntentModule } from './intent/intent.module';
     VehicleModule,
     SearchModule,
     IntentModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService],

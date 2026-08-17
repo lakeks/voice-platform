@@ -37,6 +37,59 @@ export class IntentService {
     }
 
     // ========================
+    // MODIFICATION QUANTITÉ
+    // ========================
+    //
+    // Exemples :
+    // "Passe l'alternateur à 2"
+    // "Finalement, je vais en prendre deux"
+    // "Vous pouvez m'en mettre deux ?"
+    // "Mettez-moi deux alternateurs"
+    //
+
+    const hasQuantity =
+      /\b\d+\b/.test(text) ||
+      text.includes('une') ||
+      text.includes('un') ||
+      text.includes('deux') ||
+      text.includes('trois') ||
+      text.includes('quatre') ||
+      text.includes('cinq') ||
+      text.includes('six') ||
+      text.includes('sept') ||
+      text.includes('huit') ||
+      text.includes('neuf') ||
+      text.includes('dix');
+
+    if (
+      hasQuantity &&
+      (
+        text.includes('finalement') ||
+        text.includes('plutôt') ||
+        text.includes('plutot') ||
+        text.includes('mettez-moi') ||
+        text.includes('mettez moi') ||
+        text.includes('mets-moi') ||
+        text.includes('mets moi') ||
+        text.includes('mettez') ||
+        text.includes('mets') ||
+        text.includes('passez') ||
+        text.includes('passe') ||
+        text.includes('en prendre') ||
+        text.includes('en prends') ||
+        text.includes("j'en prends") ||
+        text.includes('j en prends') ||
+        text.includes('en mettre') ||
+        text.includes('en mets') ||
+        text.includes("m'en mettre") ||
+        text.includes('m en mettre') ||
+        text.includes('m en mets')
+      )
+    ) {
+      return IntentType.MODIFY_QUOTE_QUANTITY;
+    }
+
+    // ========================
     // AJOUT AU DEVIS
     // ========================
 
@@ -54,39 +107,6 @@ export class IntentService {
       text.includes('je voudrais aussi')
     ) {
       return IntentType.ADD_QUOTE_ITEM;
-    }
-
-    // ========================
-    // MODIFICATION QUANTITÉ
-    // ========================
-
-    if (
-      (
-        text.includes('finalement') ||
-        text.includes('plutôt') ||
-        text.includes('plutot') ||
-        text.includes('mettez-moi') ||
-        text.includes('mettez moi') ||
-        text.includes('mets-moi') ||
-        text.includes('mets moi') ||
-        text.includes('mettez') ||
-        text.includes('passez') ||
-        text.includes('passe')
-      ) &&
-      (
-        /\b\d+\b/.test(text) ||
-        text.includes('deux') ||
-        text.includes('trois') ||
-        text.includes('quatre') ||
-        text.includes('cinq') ||
-        text.includes('six') ||
-        text.includes('sept') ||
-        text.includes('huit') ||
-        text.includes('neuf') ||
-        text.includes('dix')
-      )
-    ) {
-      return IntentType.MODIFY_QUOTE_QUANTITY;
     }
 
     // ========================

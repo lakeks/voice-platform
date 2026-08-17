@@ -96,24 +96,28 @@ export class ParserService {
 
     let quantity: number | undefined;
 
+    const writtenQuantities: Record<string, number> = {
+      une: 1,
+      un: 1,
+      deux: 2,
+      trois: 3,
+      quatre: 4,
+      cinq: 5,
+      six: 6,
+      sept: 7,
+      huit: 8,
+      neuf: 9,
+      dix: 10,
+    };
+
+    // ========================
+    // QUANTITÉ AVEC PRODUIT
+    // ========================
+
     if (product) {
 
       const productPattern =
         `${product.toLowerCase()}s?`;
-
-      const writtenQuantities: Record<string, number> = {
-        une: 1,
-        un: 1,
-        deux: 2,
-        trois: 3,
-        quatre: 4,
-        cinq: 5,
-        six: 6,
-        sept: 7,
-        huit: 8,
-        neuf: 9,
-        dix: 10,
-      };
 
       // Quantités écrites
 
@@ -162,6 +166,138 @@ export class ParserService {
         if (singularPattern.test(normalizedQuestion)) {
           quantity = 1;
         }
+      }
+    }
+
+    // ========================
+    // QUANTITÉ SANS PRODUIT
+    // ========================
+    //
+    // Exemples :
+    // "Finalement, je vais en prendre deux"
+    // "Je vais en prendre trois"
+    // "Vous pouvez m'en mettre deux ?"
+    // "Je vais en mettre deux"
+    //
+
+    if (quantity === undefined) {
+
+      for (
+        const [word, value]
+        of Object.entries(writtenQuantities)
+      ) {
+
+        if (
+          normalizedQuestion.includes(
+            `en prendre ${word}`,
+          ) ||
+          normalizedQuestion.includes(
+            `en mettre ${word}`,
+          ) ||
+          normalizedQuestion.includes(
+            `m'en mettre ${word}`,
+          ) ||
+          normalizedQuestion.includes(
+            `m en mettre ${word}`,
+          ) ||
+          normalizedQuestion.includes(
+            `j'en prends ${word}`,
+          ) ||
+          normalizedQuestion.includes(
+            `j en prends ${word}`,
+          ) ||
+          normalizedQuestion.includes(
+            `en prends ${word}`,
+          ) ||
+          normalizedQuestion.includes(
+            `en mets ${word}`,
+          )
+        ) {
+          quantity = value;
+          break;
+        }
+      }
+    }
+
+    // ========================
+    // QUANTITÉ NUMÉRIQUE
+    // SANS PRODUIT
+    // ========================
+
+    if (quantity === undefined) {
+
+      const contextualQuantityPattern =
+        /\b(?:en prendre|en mettre|m'en mettre|m en mettre|j'en prends|j en prends|en prends|en mets)\s+(\d+)\b/i;
+
+      const match =
+        normalizedQuestion.match(
+          contextualQuantityPattern,
+        );
+
+      if (match) {
+        quantity = Number(match[1]);
+      }
+    }
+
+    // ========================
+    // QUANTITÉ APRÈS LE PRODUIT
+    // ========================
+    //
+    // Exemples :
+    // "Passez l'alternateur à 2"
+    // "Mettez l'alternateur à deux"
+    //
+
+    if (
+      quantity === undefined &&
+      product
+    ) {
+
+      const quantityAfterProductPattern =
+        new RegExp(
+          `\\b${product.toLowerCase()}s?\\b(?:\\s+\\w+){0,4}\\s+(?:à|a)\\s+(\\d+|une?|deux|trois|quatre|cinq|six|sept|huit|neuf|dix)\\b`,
+          'i',
+        );
+
+      const match =
+        normalizedQuestion.match(
+          quantityAfterProductPattern,
+        );
+
+      if (match) {
+
+        const value =
+          match[1].toLowerCase();
+
+        quantity =
+          writtenQuantities[value] ??
+          Number(value);
+      }
+    }
+
+    // ========================
+    // QUANTITÉ ÉCRITE APRÈS
+    // "à deux"
+    // ========================
+
+    if (quantity === undefined) {
+
+      const quantityAfterPattern =
+        /\b(?:à|a)\s+(une?|deux|trois|quatre|cinq|six|sept|huit|neuf|dix)\b/i;
+
+      const match =
+        normalizedQuestion.match(
+          quantityAfterPattern,
+        );
+
+      if (match) {
+
+        const value =
+          match[1].toLowerCase();
+
+        quantity =
+          writtenQuantities[value] ??
+          Number(value);
       }
     }
 

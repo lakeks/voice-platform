@@ -36,11 +36,32 @@ export class ResultActionService {
         };
       }
 
-      const product =
+      let product =
         parsed.product?.toLowerCase();
 
       const quantity =
         parsed.quantity;
+
+      // ==========================================
+      // PIÈCE NON PRÉCISÉE
+      // ==========================================
+      //
+      // Exemple :
+      // "Finalement, je vais en prendre deux"
+      //
+      // Si une seule pièce est présente dans
+      // le devis, on utilise automatiquement
+      // cette pièce.
+      //
+
+      if (
+        !product &&
+        context.quote.items.length === 1
+      ) {
+
+        product =
+          context.quote.items[0].label?.toLowerCase();
+      }
 
       if (!product) {
 
